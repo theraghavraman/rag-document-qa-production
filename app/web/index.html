@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RAG Platform | Document Intelligence</title><link rel="stylesheet" href="/assets/styles.css"></head>
+<body>
+<section id="login-view" class="login-wrap"><div class="login-card">
+<div class="logo-mark">R</div><span class="eyebrow">DOCUMENT INTELLIGENCE</span>
+<h1>Your knowledge.<br><span>Grounded answers.</span></h1>
+<p>Search your company's documents with evidence-linked responses.</p>
+<form id="login-form">
+<label>Workspace slug<input name="workspace_slug" autocomplete="organization" placeholder="acme-research" required></label>
+<label>Email address<input name="email" type="email" autocomplete="username" placeholder="you@company.com" required></label>
+<label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+<button class="primary full" type="submit">Sign in <span>→</span></button></form>
+<p class="subtle">New team? <a href="#" id="signup-link">Create a workspace</a> · <a href="/docs">API documentation</a></p>
+<div id="login-error" class="error" role="alert"></div></div></section>
+<section id="activation-view" class="login-wrap hidden"><div class="login-card">
+<div class="logo-mark">R</div><div class="eyebrow">SECURE ONBOARDING</div><h1 id="activation-title">Activate your access</h1>
+<p id="activation-copy">Complete your workspace invitation.</p>
+<form id="activation-form"><label id="activation-password-label">Choose password<input id="activation-password" type="password" minlength="12" required></label>
+<button class="primary full" type="submit">Continue →</button></form><div id="activation-error" class="error"></div>
+<p><a href="/app">Return to sign in</a></p></div></section>
+<section id="signup-view" class="login-wrap hidden"><div class="login-card"><div class="logo-mark">R</div>
+<div class="eyebrow">NEW WORKSPACE</div><h1>Create your workspace.</h1><p>A verification email is required in production.</p>
+<form id="signup-form"><label>Workspace name<input name="workspace_name" required minlength="2"></label>
+<label>Workspace slug<input name="workspace_slug" required pattern="[a-z][a-z0-9-]{2,59}" placeholder="acme-research"></label>
+<label>Work email<input type="email" name="email" required></label>
+<label>Password<input type="password" name="password" minlength="12" required></label>
+<button class="primary full" type="submit">Send verification email →</button></form>
+<div id="signup-result" class="error"></div><p><a href="/app">Back to sign in</a></p></div></section>
+<div id="shell" class="shell hidden">
+<aside class="sidebar"><div class="brand"><div class="logo-mark small">R</div><strong>RAG Platform</strong></div>
+<div class="workspace-chip"><span id="workspace-name">Workspace</span><small id="workspace-plan">Trial</small></div>
+<nav class="nav"><button data-tab="documents" class="active">▤ <span>Documents</span></button>
+<button data-tab="ask">◇ <span>Ask a question</span></button><button data-tab="usage">▥ <span>Usage & billing</span></button>
+<button data-tab="team">♧ <span>Team & API keys</span></button></nav>
+<div class="nav-footer"><a href="/docs" target="_blank" rel="noopener">API reference ↗</a><button id="logout">Sign out</button></div></aside>
+<main class="main"><header class="topbar"><span id="section-title">Documents</span><div class="identity" id="identity"></div></header>
+<div class="content">
+<section id="tab-documents" class="page"><div class="page-header"><div><div class="eyebrow">KNOWLEDGE BASE</div><h2>Documents</h2><p>Upload and track ingestion. Every update preserves its previous indexed version.</p></div></div>
+<div class="upload-card"><div class="upload-icon">⇧</div><div><strong>Upload a document</strong><p>PDF, DOCX, TXT or Markdown · Maximum configured file size</p></div>
+<form id="upload-form"><input id="upload-file" type="file" accept=".pdf,.docx,.txt,.md" required><button class="primary" type="submit">Upload</button></form></div>
+<div class="table-card"><div class="table-title"><h3>Document library</h3><button class="quiet" id="refresh-documents">↻ Refresh</button></div>
+<div class="table-wrap"><table><thead><tr><th>File</th><th>Status</th><th>Updated</th><th>Actions</th></tr></thead><tbody id="documents-body"></tbody></table></div></div></section>
+<section id="tab-ask" class="page hidden"><div class="page-header"><div><div class="eyebrow">GROUNDED Q&A</div><h2>Ask your documents</h2><p>Find answers with verifiable document references.</p></div></div>
+<div class="query-card"><form id="query-form"><label>Question<textarea id="question" rows="4" maxlength="4000" placeholder="What does our policy say about returns?" required></textarea></label><div class="query-toolbar"><small>Searches ready documents in this workspace</small><button class="primary" type="submit">Find answer →</button></div></form></div>
+<div class="answer-card hidden" id="answer-panel"><div class="eyebrow">ANSWER</div><p id="answer-text" class="answer-text"></p><span class="citation-note" id="answer-grounded"></span><h3>Evidence</h3><div id="answer-sources"></div></div></section>
+<section id="tab-usage" class="page hidden"><div class="page-header"><div><div class="eyebrow">WORKSPACE INSIGHTS</div><h2>Usage & billing</h2><p>Transparent quotas and usage, updated from your workspace.</p></div></div>
+<div id="usage-grid" class="stat-grid"></div><div class="table-card billing-card"><div><h3>Subscription</h3><p>Manage your plan securely through Stripe when billing is configured.</p></div>
+<div class="billing-actions"><button class="secondary" id="upgrade-starter">Starter plan</button><button class="secondary" id="upgrade-business">Business plan</button><button class="quiet" id="billing-portal">Billing portal ↗</button></div></div></section>
+<section id="tab-team" class="page hidden"><div class="page-header"><div><div class="eyebrow">ACCESS MANAGEMENT</div><h2>Team & API keys</h2><p>Issue revocable credentials and invite teammates to your workspace.</p></div></div>
+<div class="two-col"><div class="table-card"><h3>Create an API key</h3><form id="key-form" class="stacked"><label>Name<input name="name" required placeholder="Production integration"></label><label>Access level<select name="role"><option value="viewer">Read only</option><option value="member">Upload + query</option><option value="admin">Administrator</option></select></label><button class="primary" type="submit">Create key</button></form>
+<div class="hidden secret-panel" id="secret-panel"><strong>Copy your key now</strong><code id="new-secret"></code><button id="copy-secret" class="secondary">Copy</button><small>It will not be displayed again.</small></div></div>
+<div class="table-card"><h3>Invite a teammate</h3><form id="invite-form" class="stacked"><label>Email<input name="email" type="email" required></label><label>Role<select name="role"><option value="member">Member</option><option value="viewer">Viewer</option><option value="admin">Admin</option></select></label><button class="primary" type="submit">Create invitation</button></form><div class="hidden secret-panel" id="invite-panel"><small>Share this token securely with your teammate:</small><code id="invite-token"></code></div></div></div>
+<div class="table-card"><div class="table-title"><h3>Active credentials</h3><button id="refresh-keys" class="quiet">↻ Refresh</button></div><div id="keys-list"></div></div></section>
+<div role="status" id="notice" class="notice hidden"></div></div></main></div>
+<script defer src="/assets/app.js"></script>
+</body></html>

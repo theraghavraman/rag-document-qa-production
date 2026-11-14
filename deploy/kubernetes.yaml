@@ -1,0 +1,179 @@
+# REFERENCE DEPLOYMENT: replace image, host, and create rag-app-secrets using secret manager.
+# No PostgreSQL, Redis or S3 is deployed here: use managed services with backups and TLS.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rag-platform
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rag-api
+  namespace: rag-platform
+spec:
+  selector: {app: rag-api}
+  ports: [{name: http, port: 80, targetPort: 8000}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag-api
+  namespace: rag-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: rag-api}
+  template:
+    metadata:
+      labels: {app: rag-api}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 10001, fsGroup: 10001, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: api
+          image: REGISTRY/rag-platform:VERSION
+          ports: [{containerPort: 8000}]
+          envFrom: [{secretRef: {name: rag-app-secrets}}]
+          resources:
+            requests: {cpu: 300m, memory: 512Mi}
+            limits: {cpu: '2', memory: 3Gi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          volumeMounts:
+            - {name: runtime, mountPath: /app/data}
+            - {name: tmp, mountPath: /tmp}
+          startupProbe:
+            httpGet: {path: /health/live, port: 8000}
+            failureThreshold: 12
+            periodSeconds: 5
+          readinessProbe:
+            httpGet: {path: /health/ready, port: 8000}
+            periodSeconds: 20
+          livenessProbe:
+            httpGet: {path: /health/live, port: 8000}
+            periodSeconds: 30
+      volumes:
+        - name: runtime
+          emptyDir: {sizeLimit: 5Gi}
+        - name: tmp
+          emptyDir: {sizeLimit: 2Gi}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag-worker
+  namespace: rag-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: rag-worker}
+  template:
+    metadata:
+      labels: {app: rag-worker}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 10001, fsGroup: 10001, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: celery
+          image: REGISTRY/rag-platform:VERSION
+          command: [celery, -A, app.celery_app:celery_app, worker, --loglevel=info, --concurrency=4, --max-tasks-per-child=60]
+          envFrom: [{secretRef: {name: rag-app-secrets}}]
+          resources:
+            requests: {cpu: 500m, memory: 1Gi}
+            limits: {cpu: '4', memory: 5Gi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          volumeMounts:
+            - {name: runtime, mountPath: /app/data}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - name: runtime
+          emptyDir: {sizeLimit: 12Gi}
+        - name: tmp
+          emptyDir: {sizeLimit: 3Gi}
+---
+# Celery Beat must be a singleton to avoid duplicate periodic task scheduling.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag-beat
+  namespace: rag-platform
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app: rag-beat}
+  template:
+    metadata:
+      labels: {app: rag-beat}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 10001, fsGroup: 10001}
+      containers:
+        - name: celery-beat
+          image: REGISTRY/rag-platform:VERSION
+          command: [celery, -A, app.celery_app:celery_app, beat, --loglevel=info, --schedule=/app/data/celerybeat-schedule]
+          envFrom: [{secretRef: {name: rag-app-secrets}}]
+          resources:
+            requests: {cpu: 100m, memory: 128Mi}
+            limits: {cpu: 500m, memory: 512Mi}
+          volumeMounts:
+            - {name: runtime, mountPath: /app/data}
+      volumes:
+        - name: runtime
+          emptyDir: {sizeLimit: 200Mi}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rag-api-hpa
+  namespace: rag-platform
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: rag-api}
+  minReplicas: 2
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: {type: Utilization, averageUtilization: 65}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rag-worker-hpa
+  namespace: rag-platform
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: rag-worker}
+  minReplicas: 2
+  maxReplicas: 12
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: {type: Utilization, averageUtilization: 70}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rag-public
+  namespace: rag-platform
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "22m" # for MAX_UPLOAD_MB=20; keep in sync
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [rag.example.com]
+      secretName: rag-tls
+  rules:
+    - host: rag.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rag-api
+                port: {number: 80}

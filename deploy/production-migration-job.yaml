@@ -1,0 +1,18 @@
+# Apply this ONE-TIME Job on each release before deploying a new application image.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rag-migrate-VERSION
+  namespace: rag-platform
+spec:
+  ttlSecondsAfterFinished: 3600
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext: {runAsNonRoot: true, runAsUser: 10001, fsGroup: 10001}
+      containers:
+        - name: migrate
+          image: REGISTRY/rag-platform:VERSION
+          command: [alembic, upgrade, head]
+          envFrom: [{secretRef: {name: rag-app-secrets}}]

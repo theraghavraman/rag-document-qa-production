@@ -1,0 +1,35 @@
+name: RAG Platform CI
+on:
+  push:
+  pull_request:
+jobs:
+  unit-and-integration:
+    runs-on: ubuntu-latest
+    permissions: {contents: read}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12', cache: pip}
+      - run: sudo apt-get update && sudo apt-get install -y tesseract-ocr libgomp1
+      - run: python -m pip install --upgrade pip && python -m pip install -r requirements-dev.txt
+      - name: Compilation and high-confidence lint
+        run: |
+          python -m compileall -q app alembic
+          ruff check --select E4,E9,F63,F7,F82 app tests
+      - name: Offline tests (stubbed provider calls)
+        env:
+          APP_ENV: test
+          JWT_SECRET: ci-only-test-jwt-secret-key-not-for-production
+          API_KEY_PEPPER: ci-only-test-api-key-pepper-not-for-production
+        run: python -m pytest -q --cov=app --cov-report=term-missing
+      - name: Dependency vulnerability gate
+        run: pip-audit -r requirements.txt
+      - name: Build deployable image
+        run: docker build -t rag-platform:ci .
+  frontend-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: node --check app/web/app.js

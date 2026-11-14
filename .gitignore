@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+!.env.production.example
+__pycache__/
+.pytest_cache/
+.venv/
+.ruff_cache/
+data/
+*.pyc
+*.db
+.coverage
+reports/

@@ -1,0 +1,10 @@
+# Example for private monitoring networks. Never publicly expose /internal/metrics.
+scrape_configs:
+  - job_name: rag-api
+    scrape_interval: 15s
+    metrics_path: /internal/metrics
+    static_configs:
+      - targets: ['api.internal:8000']
+    http_headers:
+      X-Metrics-Token:
+        values: ['REPLACE-WITH-SECRET-VIA-PROMETHEUS-SECRET-MANAGER']
