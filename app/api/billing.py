@@ -1,4 +1,5 @@
 """Optional Stripe checkout, portal, signed and idempotent webhook processing."""
+import json
 import logging
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from sqlalchemy import select
@@ -75,10 +76,15 @@ async def stripe_webhook(request: Request, stripe_signature: str | None = Header
         raise HTTPException(400, 'Missing Stripe signature')
     payload = await request.body()
     try:
-        event = stripe.Webhook.construct_event(payload, stripe_signature,
-                                               get_settings().stripe_webhook_secret)
+        stripe.Webhook.construct_event(payload, stripe_signature,
+                                       get_settings().stripe_webhook_secret)
+        # Signature verified above. Read the same verified bytes as plain JSON:
+        # stripe-python StripeObject no longer supports dict methods like .get().
+        event = json.loads(payload)
     except (ValueError, stripe.SignatureVerificationError):
         raise HTTPException(400, 'Invalid Stripe webhook signature') from None
+    if not isinstance(event, dict) or not isinstance(event.get('data'), dict):
+        raise HTTPException(400, 'Malformed Stripe webhook payload')
     event_id = event['id']
     created = int(event.get('created', 0))
     event_type = event['type']
