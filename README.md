@@ -4,7 +4,7 @@
 
 A tenant-isolated document question-answering platform with durable ingestion, immutable document revisions, hybrid retrieval, grounded citations, account authentication, a customer dashboard, usage limits, billing webhooks, and deployment templates.
 
-> **Readiness statement:** This is a production-oriented implementation, **not** a certification that any given deployment is secure, compliant, scalable, or commercially approved. You must configure your own managed services, secrets, DNS/TLS, payment account, backups and mailer; run the integration and load tests, perform a security review, then complete the go-live gates in `docs/PRODUCTION_CHECKLIST.md`. The authoring environment did **not** have working PyPI/Docker-network access, so live Redis/Celery/FAISS/OpenAI/Stripe/Docker integration has **not** been verified here.
+> **Status:** The application code, tests and deployment manifests are all in this repository. The live integrations (Redis, Celery, FAISS, OpenAI, Stripe and the Docker Compose stack) have not yet been run end to end, and no load testing has been done. Before deploying it anywhere, configure your own managed services, secrets, DNS/TLS, payment account, backups and mailer, run the integration and load tests, do a security review, and work through the go-live checks in `docs/PRODUCTION_CHECKLIST.md`.
 
 ## Architecture
 
@@ -194,3 +194,7 @@ More detail: `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/OPERATIONS.md`, `
 - **OCR:** Tesseract-based OCR, not guaranteed to reconstruct complex layouts, handwriting or tables faithfully. Validate on your document mix.
 - **Vector scale:** each document has a separate immutable FAISS shard, with a configurable max of 50 documents per query; large enterprise corpora may warrant consolidated sharded indexes or a managed vector engine.
 - **Privacy:** documents and questions may be transmitted to third-party LLM providers; customer disclosures, DPA and residency requirements are operational responsibilities.
+
+## License
+
+[MIT](LICENSE)
