@@ -31,6 +31,8 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-ragminio}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-ragminio_dev_secret}
+      # Demo-only key so MinIO accepts the app's AES256 server-side encryption requests.
+      MINIO_KMS_SECRET_KEY: ${MINIO_KMS_SECRET_KEY:-rag-demo-key:n1AOntItK2nkrR2WGwr2QKt9DHWJ2EgvltjZpBk03A4=}
     volumes: [minio-data:/data]
     restart: unless-stopped
   minio-init:
