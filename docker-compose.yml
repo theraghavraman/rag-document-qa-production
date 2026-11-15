@@ -24,20 +24,44 @@ services:
       retries: 20
     restart: unless-stopped
   minio:
-    image: minio/minio:latest
-    command: server /data --console-address :9001
+    # MinIO's own images were removed from Docker Hub in 2026; this is a maintained build.
+    image: cgr.dev/chainguard/minio:latest
+    user: "0:0"  # demo only: lets the server write to the named volume
+    command: ["server", "/data", "--console-address", ":9001"]
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-ragminio}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-ragminio_dev_secret}
     volumes: [minio-data:/data]
     restart: unless-stopped
   minio-init:
-    image: minio/mc:latest
-    entrypoint: ["/bin/sh", "-c"]
-    command: ["until mc alias set local http://minio:9000 \"$${MINIO_ROOT_USER}\" \"$${MINIO_ROOT_PASSWORD}\"; do sleep 2; done; mc mb --ignore-existing local/rag-documents; mc anonymous set none local/rag-documents"]
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-ragminio}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-ragminio_dev_secret}
+    # Creates the demo bucket with the app image, so no separate client image is needed.
+    build: .
+    env_file: .env
+    command:
+      - python
+      - -c
+      - |
+        import os, time, boto3
+        from botocore.exceptions import ClientError
+        s3 = boto3.client('s3', endpoint_url=os.environ['S3_ENDPOINT_URL'],
+                          region_name=os.environ.get('S3_REGION', 'us-east-1'),
+                          aws_access_key_id=os.environ['S3_ACCESS_KEY_ID'],
+                          aws_secret_access_key=os.environ['S3_SECRET_ACCESS_KEY'])
+        bucket = os.environ['S3_BUCKET']
+        for attempt in range(60):
+            try:
+                s3.head_bucket(Bucket=bucket)
+                break
+            except ClientError as error:
+                if error.response['Error']['Code'] in ('404', 'NoSuchBucket'):
+                    s3.create_bucket(Bucket=bucket)
+                    break
+                time.sleep(2)
+            except Exception:
+                time.sleep(2)
+        else:
+            raise SystemExit('Object storage did not become ready')
+        print('Bucket ready:', bucket)
     depends_on: [minio]
     restart: 'no'
   mailpit:
