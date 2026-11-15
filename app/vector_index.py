@@ -36,6 +36,8 @@ def embedding_client():
               'max_retries': 3, 'request_timeout': 45}
     if s.openai_base_url:
         kwargs['base_url'] = s.openai_base_url
+        # OpenAI-compatible local servers (LM Studio, Ollama) take text, not token-id arrays.
+        kwargs['check_embedding_ctx_length'] = False
     return OpenAIEmbeddings(**kwargs)
 
 

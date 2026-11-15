@@ -67,6 +67,29 @@ docker compose exec api python -m app.cli bootstrap \
 
 You'll be prompted for a password (not put into shell history). Users can then sign in on `/app`.
 
+### Run without an OpenAI key (LM Studio or Ollama)
+
+`OPENAI_BASE_URL` points both chat and embeddings at any OpenAI-compatible server, so the whole stack can run against models on your own machine.
+
+**LM Studio**
+
+1. Download a chat model and an embedding model (for example `nomic-embed-text-v1.5`).
+2. In the Developer tab, start the local server (port 1234) and load both models. Or from a terminal: `lms server start`.
+3. Check the exact model identifiers with `curl http://localhost:1234/v1/models`.
+4. Set these in `.env`, using the identifiers from step 3:
+
+```bash
+LLM_PROVIDER=openai
+OPENAI_API_KEY=lm-studio          # any non-empty value
+OPENAI_BASE_URL=http://host.docker.internal:1234/v1
+OPENAI_CHAT_MODEL=qwen2.5-coder-1.5b-instruct
+OPENAI_EMBEDDING_MODEL=text-embedding-nomic-embed-text-v1.5
+```
+
+**Ollama** works the same way with `OPENAI_BASE_URL=http://host.docker.internal:11434/v1` and the names of models you have pulled. On Linux, Ollama must listen on `0.0.0.0` for containers to reach it.
+
+Then run `docker compose up --build -d` as above. Small local models often leave out the `[S1]` citation markers; when they do, the API returns its abstention message with `grounded: false`, although retrieval still ran. Changing the embedding model later means re-uploading documents, because each index records the model that built it.
+
 ### API flow
 
 ```bash
