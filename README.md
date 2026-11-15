@@ -1,5 +1,7 @@
 # RAG Document Q&A Platform · Production-oriented SaaS edition
 
+[![CI](https://github.com/theraghavraman/rag-document-qa-production/actions/workflows/ci.yml/badge.svg)](https://github.com/theraghavraman/rag-document-qa-production/actions/workflows/ci.yml)
+
 **FastAPI · LangChain · FAISS · PostgreSQL · Redis · Celery · S3 · Stripe**
 
 A tenant-isolated document question-answering platform with durable ingestion, immutable document revisions, hybrid retrieval, grounded citations, account authentication, a customer dashboard, usage limits, billing webhooks, and deployment templates.
