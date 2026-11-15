@@ -58,6 +58,8 @@ open http://localhost:8000/docs
 open http://localhost:8025
 ```
 
+If port 8000 is already taken, start with `API_PORT=8010 docker compose up --build -d` and set `PUBLIC_APP_URL` and `CORS_ORIGINS` in `.env` to `http://localhost:8010`.
+
 The default demo enables **verified registration via Mailpit**. Create a workspace on `/app`, then open the verification email in Mailpit and click the link. Alternatively bootstrap an owner using the CLI:
 
 ```bash
