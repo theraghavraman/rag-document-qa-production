@@ -4,7 +4,7 @@
 
 A tenant-isolated document question-answering platform with durable ingestion, immutable document revisions, hybrid retrieval, grounded citations, account authentication, a customer dashboard, usage limits, billing webhooks, and deployment templates.
 
-> **Status:** The application code, tests and deployment manifests are all in this repository. The live integrations (Redis, Celery, FAISS, OpenAI, Stripe and the Docker Compose stack) have not yet been run end to end, and no load testing has been done. Before deploying it anywhere, configure your own managed services, secrets, DNS/TLS, payment account, backups and mailer, run the integration and load tests, do a security review, and work through the go-live checks in `docs/PRODUCTION_CHECKLIST.md`.
+> **Status:** The local Docker Compose demo was run end to end on 15 November 2026 (Apple Silicon, Colima) against local models served by LM Studio: owner bootstrap, sign-in, upload to MinIO, Celery ingestion, FAISS indexing, hybrid retrieval, cited answers and abstention on an off-topic question all worked. Not yet run: the hosted OpenAI and Anthropic APIs, Stripe billing, the email sign-up flow, a real S3 bucket, the Kubernetes manifests and any load test. Before deploying it anywhere, configure your own managed services, secrets, DNS/TLS, payment account, backups and mailer, run the integration and load tests, do a security review, and work through the go-live checks in `docs/PRODUCTION_CHECKLIST.md`.
 
 ## Architecture
 
@@ -84,13 +84,13 @@ You'll be prompted for a password (not put into shell history). Users can then s
 LLM_PROVIDER=openai
 OPENAI_API_KEY=lm-studio          # any non-empty value
 OPENAI_BASE_URL=http://host.docker.internal:1234/v1
-OPENAI_CHAT_MODEL=qwen2.5-coder-1.5b-instruct
+OPENAI_CHAT_MODEL=llama-3.2-3b-instruct
 OPENAI_EMBEDDING_MODEL=text-embedding-nomic-embed-text-v1.5
 ```
 
 **Ollama** works the same way with `OPENAI_BASE_URL=http://host.docker.internal:11434/v1` and the names of models you have pulled. On Linux, Ollama must listen on `0.0.0.0` for containers to reach it.
 
-Then run `docker compose up --build -d` as above. Small local models often leave out the `[S1]` citation markers; when they do, the API returns its abstention message with `grounded: false`, although retrieval still ran. Changing the embedding model later means re-uploading documents, because each index records the model that built it.
+Then run `docker compose up --build -d` as above. Use a general instruct model of about 3B parameters or more (Llama 3.2 3B Instruct worked in testing; a 1.5B coder model did not answer from the excerpts). If a model leaves out the `[S1]` citation markers, the API returns its abstention message with `grounded: false`, although retrieval still ran. Local models can be slow, so raise `QUERY_TIMEOUT_SECONDS` (up to 180) if queries time out. Changing the embedding model later means re-uploading documents, because each index records the model that built it.
 
 ### API flow
 
